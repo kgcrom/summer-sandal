@@ -118,3 +118,23 @@ uv run scripts/build_site.py     # wiki/ → site/
 ```
 
 `main` 에 push 하면 `.github/workflows/pages.yml` 이 `site/` 를 만들어 GitHub Pages 로 배포한다.
+
+## push 계정
+
+이 레포는 레포 주인 계정으로만 커밋하고 push 한다. 주인은 `origin` URL 의 owner 다. `gh` 활성 계정은 회사 계정 그대로 둔다. 전환하지 않는다.
+
+| 장치 | 하는 일 |
+|---|---|
+| 레포 설정의 인증 도우미 | push 가 항상 주인 계정의 토큰을 쓴다. `gh` 활성 계정과 상관없다 |
+| `.githooks/pre-push` | 주인 계정이 `gh` 에 없거나 고정 설정이 없으면 push 를 막는다 |
+| `.githooks/pre-commit` | 작성자·커미터 메일이 주인의 메일이 아니면 커밋을 막는다 |
+
+새로 clone 하면 아래를 한 번 실행한다. 레포 설정만 바꾼다. 전역 설정은 바꾸지 않는다.
+
+```bash
+sh .githooks/setup.sh
+```
+
+- `pre-commit` 은 `<owner>@...` 와 `...+<owner>@users.noreply.github.com` 메일만 통과시킨다. `user.name`·`user.email` 은 레포 설정에 직접 넣는다.
+- hook 은 `git commit`·`git push` 만 막는다. `gh pr create` 같은 `gh` 명령은 활성 계정으로 실행된다. 이 레포에서 `gh` 로 글을 쓰는 명령은 실행 전에 사용자에게 계정을 확인받는다.
+- `--no-verify` 는 hook 을 건너뛴다. 쓰지 않는다.

@@ -1,0 +1,18 @@
+#!/bin/sh
+# 커밋의 작성자·커미터 메일이 레포 주인의 메일인지 확인한다. 주인은 origin URL 의 owner 다.
+# 통과하는 메일: <owner>@... 또는 ...+<owner>@users.noreply.github.com
+
+owner=$(git remote get-url origin 2>/dev/null | sed -nE 's#^https://github\.com/([^/]+)/.*#\1#p')
+[ -n "$owner" ] || exit 0 # origin 이 없거나 github.com 이 아니면 검사하지 않는다
+
+for who in AUTHOR COMMITTER; do
+    email=$(git var "GIT_${who}_IDENT" | sed -E 's/^.*<([^>]*)>.*$/\1/')
+    case "$email" in
+    "$owner"@* | *+"$owner"@users.noreply.github.com) ;;
+    *)
+        printf '커밋을 막았다: %s 메일이 %s 다. %s 의 메일이어야 한다\n' "$who" "$email" "$owner" >&2
+        printf '  해결: git config --local user.email "<%s 의 메일>"\n' "$owner" >&2
+        exit 1
+        ;;
+    esac
+done

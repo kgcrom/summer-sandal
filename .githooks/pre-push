@@ -1,0 +1,31 @@
+#!/bin/sh
+# push 가 레포 주인 계정의 토큰으로 나가는지 확인한다. 주인은 remote URL 의 owner 다.
+# gh 활성 계정은 보지 않는다. 이 레포의 push 인증은 주인 계정으로 고정한다(setup.sh).
+# 확인 순서: remote 형식 → gh 설치 → 주인 계정 로그인 → 고정 설정.
+
+url="$2"
+case "$url" in
+*github.com*) ;;
+*) exit 0 ;; # github.com 이 아니면 검사하지 않는다
+esac
+
+fail() {
+    printf 'push 를 막았다: %s\n' "$1" >&2
+    printf '  해결: %s\n' "$2" >&2
+    exit 1
+}
+
+owner=$(printf '%s' "$url" | sed -nE 's#^https://github\.com/([^/]+)/.*#\1#p')
+[ -n "$owner" ] ||
+    fail "remote 가 https 가 아니다. 어느 계정으로 push 되는지 알 수 없다" \
+        "git remote set-url origin https://github.com/<owner>/<repo>"
+
+command -v gh >/dev/null 2>&1 ||
+    fail "gh 가 없다" "brew install gh"
+
+gh auth token --hostname github.com --user "$owner" >/dev/null 2>&1 ||
+    fail "gh 에 $owner 계정이 로그인되어 있지 않다" "gh auth login --hostname github.com"
+
+git config --get-urlmatch credential.helper "$url" |
+    grep -q -- "gh auth token --hostname github.com --user $owner " ||
+    fail "push 인증이 $owner 로 고정되어 있지 않다" "sh .githooks/setup.sh"
