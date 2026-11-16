@@ -11,6 +11,8 @@ kotlin {
 }
 
 dependencies {
+    api(project(":summer-framework"))
+
     testImplementation(platform(libs.kotest.bom))
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.runner.junit5)
