@@ -2,6 +2,8 @@
 
 Spring 은 XML 을 두 단계로 처리한다. 먼저 XML 을 읽어 `BeanDefinition`(빈을 만드는 설계도)을 이름별로 등록한다. 그 뒤 `getBean` 이나 `refresh` 마지막 단계에서 설계도대로 객체를 만든다. 기준 태그는 spring-framework `v7.0.10` 이다.
 
+같은 흐름을 한 걸음씩 눌러 보는 페이지가 있다: [XML 한 줄이 Kotlin 객체가 되기까지](../visual/xml-to-bean.html).
+
 ## 기본 사용법
 
 **XML 파일을 컨텍스트에 넘기고 `getBean` 으로 꺼낸다.** 공식 문서의 예시는 아래와 같다.

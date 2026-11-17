@@ -10,3 +10,7 @@
 ## [2026-11-17] query | XML 빈 로딩 사용법과 호출 흐름
 
 `ClassPathXmlApplicationContext` 사용 예시와 `spring-beans.xsd` 기능을 정리했다. XML → BeanDefinition 등록 → getBean 생성 흐름을 `wiki/spring/xml-bean-loading.md` 에 남겼다.
+
+## [2026-11-17] setup | 조작 페이지 형식 추가
+
+`wiki/visual/xml-to-bean.html` 을 만들었다. XML 등록과 객체 생성을 한 걸음씩 본다. 변환기는 `wiki/` 의 `.html` 에 공통 CSS 를 넣어 옮긴다.

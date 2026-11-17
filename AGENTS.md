@@ -30,6 +30,7 @@ wiki/steps/              단계 노트의 요약 페이지
 wiki/concepts/           개념 1개 = 1페이지
 wiki/spring/             Spring 코드 지도 (경로:줄 @태그)
 wiki/summer/             내 구현이 Spring 과 같은 점 · 다른 점
+wiki/visual/             눌러 보며 익히는 조작 페이지 (.html)
 scripts/build_site.py    wiki/ → site/ HTML 변환
 ```
 
@@ -50,7 +51,7 @@ scripts/build_site.py    wiki/ → site/ HTML 변환
 1. 노트와 그 단계의 커밋 diff 를 읽는다.
 2. 요약 3~5줄을 대화에 먼저 보인다. 강조할 곳을 묻는다.
 3. `wiki/steps/NN-이름.md` 요약 페이지를 쓴다.
-4. 관련 `wiki/concepts/`, `wiki/summer/` 페이지를 갱신한다. 새 내용이 옛 서술과 어긋나면 페이지에 그 사실을 적는다.
+4. 관련 `wiki/concepts/`, `wiki/summer/` 페이지를 갱신한다. 새 내용이 옛 서술과 어긋나면 페이지에 그 사실을 적는다. 그 주제의 `wiki/visual/` 페이지가 있으면 summer 기준으로 갱신한다.
 5. `index.md` 를 갱신한다. `log.md` 에 한 줄을 덧붙인다.
 6. `uv run scripts/build_site.py` 로 확인한다.
 
@@ -62,6 +63,7 @@ scripts/build_site.py    wiki/ → site/ HTML 변환
 - 어디서도 링크하지 않는 페이지
 - 언급은 있는데 페이지가 없는 개념
 - `wiki/summer/` 서술과 실제 코드가 다른 곳
+- `wiki/visual/` 페이지의 summer 동작과 실제 코드가 다른 곳
 - `wiki/spring/` 인용의 태그가 사본의 현재 태그와 다른 곳
 
 ## Spring 소스 읽기
@@ -109,6 +111,23 @@ SpringApplication#run — 앱을 시작하고 컨텍스트를 돌려준다
 - 위키 페이지끼리는 상대 경로 `.md` 로 링크한다. 위키 밖 파일은 `code` 로 경로만 쓴다.
 - `log.md` 항목은 `## [2026-11-16] ingest | 제목` 형식이다. 종류는 `setup`·`ingest`·`query`·`lint` 다. `grep "^## \[" wiki/log.md | tail -5` 로 최근 기록을 본다.
 - 변환기는 제목이 없거나 링크 대상이 없으면 실패한다.
+
+## 조작 페이지
+
+`wiki/visual/*.html` 은 눌러 보며 익히는 페이지다. AI 가 쓴다. 예시는 `wiki/visual/xml-to-bean.html` 이다.
+
+기준은 그 주제의 구현이 있는지로 정한다.
+
+| 상태 | 무엇을 그리나 |
+|---|---|
+| `summer-*` 구현이 없다 | Spring 만 그린다. 범위는 첫 구현에 필요한 만큼으로 자른다 |
+| `summer-*` 구현이 있다 | summer 구조로 그린다. Spring 과 다른 곳은 같은 화면에 나란히 놓는다 |
+
+- 구현이 없는 summer 동작을 지어내 그리지 않는다. 그것은 구현을 대신 쓰는 일이다.
+- 걸음마다 근거를 붙인다. Spring 은 `경로:줄 @태그`, summer 는 `경로:줄` 이다.
+- 페이지 머리의 `scripts/site/base.css` 링크를 지우지 않는다. 변환기가 그 줄을 공통 CSS 로 바꾼다. 링크가 없으면 변환기가 실패한다.
+- JS 는 단계 목록을 만드는 부분과 단계 하나를 그리는 부분으로 나눈다. 외부 라이브러리는 쓰지 않는다.
+- 조작 페이지로 가는 링크는 `.html` 로 쓴다. `index.md` 의 「조작 페이지」에 올린다.
 
 ## 명령
 

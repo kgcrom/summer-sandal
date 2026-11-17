@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XML 에서 빈까지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- 변환기(scripts/build_site.py)가 아래 줄을 공통 CSS 로 바꿔 넣는다. 이 파일을 바로 열어도 같은 CSS 가 읽힌다. -->
+<link rel="stylesheet" href="../../scripts/site/base.css">
+<style>
+.page{padding:3rem 0 4rem}
+.sec>p,.sec>details,.sec>ul{max-width:var(--measure)}
+.eyebrow a{text-decoration-color:var(--ink-4)}
+
+/* 코드 두 칸 */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;max-width:1000px;margin:1.5rem 0}
+.pane{border:1px solid var(--line-soft);min-width:0}
+.pt{font-family:var(--mono);font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);
+  padding:8px 12px;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:12px}
+.pane pre{margin:0;border:0;max-width:none;background:transparent;padding:10px 0}
+.pane pre code{display:block;line-height:1.75}
+.pane pre .l{display:block;padding:0 12px 0 14px;border-left:2px solid transparent;min-height:1.75em}
+.pane pre .l.on{background:color-mix(in srgb,var(--accent) 12%,transparent);border-left-color:var(--accent);color:var(--ink)}
+.pane pre .l.bad{background:var(--del-bg);border-left-color:var(--del);color:var(--ink)}
+.pane pre .l.dim{color:var(--ink-4)}
+.chg{color:var(--accent-ink);text-decoration:underline;text-underline-offset:.2em}
+
+/* 그림: 화살표의 점선이 흐르는 방향 = 데이터가 가는 방향 */
+.flow{stroke-dasharray:4 4}
+@media (prefers-reduced-motion:no-preference){.flow{animation:flow 1s linear infinite}}
+@keyframes flow{to{stroke-dashoffset:-8}}
+svg .hd{fill:var(--ink-3)} svg .hd.f{fill:var(--accent)}
+
+/* 조작 영역 */
+.lab{border-top:1px solid var(--line);margin:1.5rem 0 0;padding-top:16px}
+.exp{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:14px;color:var(--ink-2)}
+.exp label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.exp input{accent-color:var(--accent);margin:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 0}
+.ctl button{font:500 13px var(--mono);color:var(--ink);background:transparent;border:1px solid var(--line);
+  padding:6px 12px;cursor:pointer;border-radius:0}
+.ctl button.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctl button:disabled{color:var(--ink-4);border-color:var(--line-soft);background:transparent;cursor:default}
+.ctl button:focus-visible,.exp input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ctl input[type=range]{flex:1 1 160px;min-width:120px;accent-color:var(--accent)}
+.now{border:1px solid var(--line);padding:12px 16px;margin:12px 0;min-height:164px}
+.now.err{border-color:var(--del)}
+.now .tt{font-size:17px;font-weight:600;line-height:1.45;margin:4px 0 6px;color:var(--ink)}
+.now p{margin:0;font-size:15px;max-width:none}
+.now .src{overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.col{display:grid;gap:12px;min-width:0}
+.cards{padding:10px 12px;display:grid;gap:8px}
+.card{border:1px solid var(--line-soft);border-left:2px solid var(--line);padding:8px 10px;min-width:0}
+.card.cur{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.card.ghost{border-style:dashed;border-left-style:solid}
+.card .ch{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.card .r{font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--ink-2);margin-top:4px;overflow-wrap:anywhere}
+.card .r i{font-style:normal;color:var(--ink-3)}
+.none{font-family:var(--mono);font-size:12.5px;color:var(--ink-4);padding:10px 12px}
+ol.stk{list-style:none;margin:0;padding:10px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--ink-3)}
+ol.stk li{padding-left:calc(var(--d)*14px);overflow-wrap:anywhere}
+ol.stk li::before{content:"└ ";color:var(--ink-4)}
+ol.stk li:first-child::before{content:""}
+ol.stk li:last-child{color:var(--ink)}
+@media (max-width:900px){.grid,.two{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow"><a href="../index.html">summer-sandal 위키</a> · visual · spring-framework v7.0.10</div>
+  <h1>XML 한 줄이 Kotlin 객체가 되기까지</h1>
+  <p class="standfirst">Spring 은 XML 을 읽자마자 객체를 만들지 않는다. 먼저 설계도를 이름으로 등록한다. 그다음 설계도대로 객체를 만든다. 아래에서 한 걸음씩 눌러 보며 확인한다.</p>
+</header>
+
+<main class="page">
+
+<section class="sec" id="s1">
+  <h2><span class="no">01</span>예시</h2>
+  <p class="lede"><b>XML 은 무엇을 만들지 적는다. Kotlin 은 그것을 이름으로 꺼내 쓴다.</b> 이 페이지는 아래 두 파일만 쓴다.</p>
+  <div class="two">
+    <div class="pane"><div class="pt"><span>beans.xml</span></div>
+<pre><code><span class="l">&lt;beans xmlns="http://www.springframework.org/schema/beans" ...&gt;</span><span class="l">  &lt;bean id="petStore" class="shop.PetStoreService"&gt;</span><span class="l">    &lt;property name="accountDao" ref="accountDao"/&gt;</span><span class="l">    &lt;property name="maxItems" value="10"/&gt;</span><span class="l">  &lt;/bean&gt;</span><span class="l">  &lt;bean id="accountDao" class="shop.JpaAccountDao"/&gt;</span><span class="l">&lt;/beans&gt;</span></code></pre></div>
+    <div class="pane"><div class="pt"><span>Shop.kt</span></div>
+<pre><code><span class="l">package shop</span><span class="l"></span><span class="l">class JpaAccountDao</span><span class="l"></span><span class="l">class PetStoreService {</span><span class="l">    lateinit var accountDao: JpaAccountDao</span><span class="l">    var maxItems: Int = 0</span><span class="l">}</span></code></pre></div>
+  </div>
+  <ul>
+    <li><code>id</code> 는 빈 이름이다. <code>class</code> 는 만들 클래스의 전체 이름이다.</li>
+    <li><code>&lt;property name="x"&gt;</code> 는 세터 <code>setX(...)</code> 를 부르라는 뜻이다. Kotlin 의 <code>var</code> 가 이 세터를 만든다.</li>
+    <li><code>ref</code> 는 다른 빈의 이름이다. <code>value</code> 는 글자 그대로의 값이다.</li>
+    <li>03 의 <code>getBean&lt;T&gt;("이름")</code> 은 Spring 이 Kotlin 용으로 주는 확장 함수다. <code>getBean("이름", T::class.java)</code> 를 부른다.
+      <span class="src id">spring-beans/src/main/kotlin/org/springframework/beans/factory/BeanFactoryExtensions.kt:40 @v7.0.10</span></li>
+  </ul>
+</section>
+
+<section class="sec" id="s2">
+  <h2><span class="no">02</span>전체 그림</h2>
+  <p class="lede"><b>두 단계 사이에 설계도 저장소가 있다.</b> 1단계는 저장소에 쓰기만 한다. 2단계는 저장소를 읽기만 한다.</p>
+  <figure class="fig">
+    <div class="fg">
+      <svg viewBox="0 0 648 186" role="img" aria-label="beans.xml 을 읽어 설계도 저장소에 등록하고, 저장소에서 꺼내 객체를 만드는 두 단계">
+        <rect class="box" x="1" y="40" width="160" height="60"/>
+        <text class="t" x="16" y="66">beans.xml</text><text class="s" x="16" y="86">&lt;bean id class&gt;</text>
+        <rect class="box f" x="244" y="40" width="160" height="60"/>
+        <text class="t" x="259" y="66">설계도 저장소</text><text class="s" x="259" y="86">beanDefinitionMap</text>
+        <rect class="box" x="487" y="40" width="160" height="60"/>
+        <text class="t" x="502" y="66">객체 캐시</text><text class="s" x="502" y="86">singletonObjects</text>
+        <path class="ln flow" d="M161 70 H236"/><path class="hd" d="M244 70 l-8 -4 v8 z"/>
+        <path class="ln flow" d="M404 70 H479"/><path class="hd" d="M487 70 l-8 -4 v8 z"/>
+        <text class="s" x="202" y="58" text-anchor="middle">1단계 등록</text>
+        <text class="s" x="445" y="58" text-anchor="middle">2단계 생성</text>
+        <path class="ref" d="M202 78 V118"/><path class="ref" d="M445 78 V118"/>
+        <text class="s" x="202" y="134" text-anchor="middle">XmlBeanDefinitionReader</text>
+        <text class="s" x="445" y="134" text-anchor="middle">getBean → createBean</text>
+        <text class="s" x="1" y="170">refresh() 가 두 단계를 차례로 부른다. 1단계가 끝나도 객체는 0개다.</text>
+      </svg>
+    </div>
+    <figcaption class="cap"><b>Fig A</b><span>리더는 저장소만 안다. 객체를 만드는 쪽도 저장소만 안다. 둘은 서로를 모른다.</span></figcaption>
+  </figure>
+</section>
+
+<section class="sec" id="s3">
+  <h2><span class="no">03</span>한 걸음씩</h2>
+  <p class="lede"><b>「다음」을 누르면 Spring 이 하는 일이 한 걸음 진행된다.</b> 누르기 전에 오른쪽 칸이 어떻게 바뀔지 먼저 예상한다. 키보드 ← → 로도 움직인다.</p>
+
+  <div class="lab" id="lab">
+    <div class="exp" role="group" aria-label="실험">
+      <span class="lb">실험</span>
+      <label><input type="checkbox" data-opt="swap"> 정의 순서 뒤집기</label>
+      <label><input type="checkbox" data-opt="proto"> <code>accountDao</code> 를 prototype 으로</label>
+      <label><input type="checkbox" data-opt="lazy"> <code>petStore</code> 를 lazy-init 으로</label>
+      <label><input type="checkbox" data-opt="typo"> <code>ref</code> 에 오타 내기</label>
+    </div>
+    <div class="ctl">
+      <button type="button" id="prev">◀ 이전</button>
+      <button type="button" id="next" class="pri">다음 ▶</button>
+      <button type="button" id="reset">처음부터</button>
+      <input type="range" id="scrub" min="0" max="1" value="0" aria-label="단계 이동">
+      <span class="lb" id="count"></span>
+    </div>
+    <div class="now" id="now" aria-live="polite">
+      <div class="lb" id="phase"></div>
+      <div class="tt" id="title"></div>
+      <p id="body"></p>
+      <span class="src" id="src"></span>
+    </div>
+    <div class="grid">
+      <div class="col">
+        <div class="pane"><div class="pt"><span>beans.xml</span></div><pre><code id="xml"></code></pre></div>
+        <div class="pane"><div class="pt"><span>Main.kt</span></div><pre><code id="kt"></code></pre></div>
+      </div>
+      <div class="col">
+        <div class="pane"><div class="pt"><span>설계도 · beanDefinitionMap</span><span id="ndef"></span></div><div id="defs"></div></div>
+        <div class="pane"><div class="pt"><span>객체</span><span id="nobj"></span></div><div id="objs"></div></div>
+        <div class="pane"><div class="pt"><span>호출 스택</span></div><ol class="stk" id="stack"></ol></div>
+      </div>
+    </div>
+  </div>
+  <noscript><p>JavaScript 가 꺼져 있으면 단계가 움직이지 않는다. 같은 흐름이 <a href="../spring/xml-bean-loading.html">XML 로 빈 정의를 읽고 꺼내 쓰기</a> 에 글로 있다.</p></noscript>
+</section>
+
+<section class="sec" id="s4">
+  <h2><span class="no">04</span>실험 네 가지</h2>
+  <p class="lede"><b>답을 열기 전에 03 의 체크 상자를 켜고 끝까지 눌러 본다.</b> 예상과 다른 곳이 배운 곳이다.</p>
+  <details>
+    <summary><span>정의 순서를 뒤집으면 결과가 달라지나?</span></summary>
+    <div><p>만드는 순서만 바뀐다. 결과는 같다. Spring 은 등록한 순서대로 싱글톤을 만든다. <code>ref</code> 는 이름만 들고 있다가 필요할 때 <code>getBean</code> 을 부른다. 그래서 뒤에 정의한 빈도 참조할 수 있다.</p>
+    <span class="src id">DefaultListableBeanFactory.java:1109 · :1315 @v7.0.10</span></div>
+  </details>
+  <details>
+    <summary><span><code>accountDao</code> 가 prototype 이면 <code>JpaAccountDao</code> 객체는 몇 개 생기나?</span></summary>
+    <div><p>2개 생긴다. <code>petStore</code> 가 주입받을 때 1개, <code>main</code> 이 <code>getBean</code> 할 때 1개다. prototype 은 캐시에 넣지 않는다. 그래서 <code>petStore.accountDao === dao</code> 는 <code>false</code> 다.</p>
+    <span class="src id">AbstractBeanFactory.java:346 @v7.0.10</span></div>
+  </details>
+  <details>
+    <summary><span><code>petStore</code> 가 lazy-init 이면 언제 만드나?</span></summary>
+    <div><p>처음 <code>getBean("petStore")</code> 를 부를 때 만든다. 시작할 때는 건너뛴다. 설계도는 1단계에서 똑같이 등록된다.</p>
+    <span class="src id">DefaultListableBeanFactory.java:1189 @v7.0.10</span></div>
+  </details>
+  <details>
+    <summary><span><code>ref</code> 에 오타가 있으면 언제 실패하나?</span></summary>
+    <div><p>1단계는 통과한다. 리더는 그 이름의 빈이 있는지 확인하지 않는다. 2단계에서 <code>getBean</code> 이 설계도를 찾지 못할 때 실패한다. lazy-init 을 함께 켜면 실패가 <code>main</code> 의 <code>getBean</code> 줄까지 미뤄진다.</p>
+    <span class="src id">BeanDefinitionValueResolver.java:365 · :375, DefaultListableBeanFactory.java:971 @v7.0.10</span></div>
+  </details>
+</section>
+
+<section class="sec" id="s5">
+  <h2><span class="no">05</span>직접 만들 때</h2>
+  <p class="lede"><b>이 페이지가 다루는 범위가 첫 구현의 범위다.</b> <code>&lt;bean id class&gt;</code>, <code>&lt;property value|ref&gt;</code>, 싱글톤 캐시 세 가지다.</p>
+  <p>생성자 주입, 자동 연결, 순환 참조, <code>init-method</code>, 확장 네임스페이스는 뺐다. 전체 기능 목록과 호출 흐름은 <a href="../spring/xml-bean-loading.html">XML 로 빈 정의를 읽고 꺼내 쓰기</a> 에 있다.</p>
+  <p>이 페이지의 기준은 Spring 이다. <code>summer-framework</code> 가 같은 XML 을 읽게 되면, 같은 화면에 두 결과를 나란히 놓는다.</p>
+</section>
+
+</main>
+<footer class="foot">원본: wiki/visual/xml-to-bean.html</footer>
+</div>
+
+<script>
+(() => {
+  const B = 'spring-beans/src/main/java/org/springframework/beans/factory/';
+  const C = 'spring-context/src/main/java/org/springframework/context/support/';
+  // 이름 — 경로:줄. 모두 spring-framework v7.0.10 사본에서 확인한 줄이다.
+  const SRC = {
+    ctor:    ['ClassPathXmlApplicationContext 생성자', C + 'ClassPathXmlApplicationContext.java:136'],
+    load:    ['XmlBeanDefinitionReader#loadBeanDefinitions', B + 'xml/XmlBeanDefinitionReader.java:327'],
+    bean:    ['BeanDefinitionParserDelegate#parseBeanDefinitionElement', B + 'xml/BeanDefinitionParserDelegate.java:496'],
+    prop:    ['BeanDefinitionParserDelegate#parsePropertyValue', B + 'xml/BeanDefinitionParserDelegate.java:904'],
+    reg:     ['DefaultListableBeanFactory#registerBeanDefinition', B + 'support/DefaultListableBeanFactory.java:1252'],
+    pre:     ['DefaultListableBeanFactory#preInstantiateSingletons', B + 'support/DefaultListableBeanFactory.java:1102'],
+    skipP:   ['preInstantiateSingletons 의 싱글톤 검사', B + 'support/DefaultListableBeanFactory.java:1120'],
+    skipL:   ['preInstantiateSingleton 의 lazy 검사', B + 'support/DefaultListableBeanFactory.java:1189'],
+    hit:     ['AbstractBeanFactory#doGetBean 의 캐시 확인', B + 'support/AbstractBeanFactory.java:244'],
+    get:     ['AbstractBeanFactory#doGetBean', B + 'support/AbstractBeanFactory.java:236'],
+    nodef:   ['DefaultListableBeanFactory#getBeanDefinition', B + 'support/DefaultListableBeanFactory.java:971'],
+    inst:    ['AbstractAutowireCapableBeanFactory#createBeanInstance', B + 'support/AbstractAutowireCapableBeanFactory.java:1173'],
+    ref:     ['BeanDefinitionValueResolver#resolveReference', B + 'support/BeanDefinitionValueResolver.java:332'],
+    refFail: ['resolveReference 의 catch', B + 'support/BeanDefinitionValueResolver.java:375'],
+    conv:    ['applyPropertyValues 의 타입 변환', B + 'support/AbstractAutowireCapableBeanFactory.java:1714'],
+    set:     ['applyPropertyValues 의 세터 호출', B + 'support/AbstractAutowireCapableBeanFactory.java:1742'],
+    cache:   ['DefaultSingletonBeanRegistry#addSingleton', B + 'support/DefaultSingletonBeanRegistry.java:159'],
+    proto:   ['doGetBean 의 prototype 갈래', B + 'support/AbstractBeanFactory.java:346'],
+    fail:    ['AbstractApplicationContext#refresh 의 catch', C + 'AbstractApplicationContext.java:644'],
+    done:    ['AbstractApplicationContext#refresh', C + 'AbstractApplicationContext.java:581'],
+  };
+  const h = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const md = s => h(s).replace(/`([^`]+)`/g, '<code>$1</code>');   // `코드` 표시만 지원한다
+  const q = s => '"' + s + '"';
+
+  const KT = [
+    'fun main() {',
+    '    val context = ClassPathXmlApplicationContext("beans.xml")',
+    '    val petStore = context.getBean<PetStoreService>("petStore")',
+    '    val dao = context.getBean<JpaAccountDao>("accountDao")',
+    '    println(petStore.accountDao === dao)',
+    '}',
+  ];
+
+  // 모델: 설정을 받아 XML 줄과 단계 목록을 만든다. 화면은 모른다.
+  function build(o) {
+    const beans = [
+      { id: 'petStore', cls: 'shop.PetStoreService', short: 'PetStoreService', lazy: o.lazy, scope: 'singleton',
+        props: [{ name: 'accountDao', ref: o.typo ? 'acountDao' : 'accountDao' }, { name: 'maxItems', value: '10' }] },
+      { id: 'accountDao', cls: 'shop.JpaAccountDao', short: 'JpaAccountDao', lazy: false,
+        scope: o.proto ? 'prototype' : 'singleton', props: [] },
+    ];
+    if (o.swap) beans.reverse();
+
+    const xml = [{ k: '', t: h('<beans>') }];
+    for (const b of beans) {
+      let t = h('  <bean id=' + q(b.id) + ' class=' + q(b.cls));
+      if (b.lazy) t += ' <span class="chg">lazy-init="true"</span>';
+      if (b.scope === 'prototype') t += ' <span class="chg">scope="prototype"</span>';
+      xml.push({ k: 'b:' + b.id, t: t + (b.props.length ? '&gt;' : '/&gt;') });
+      for (const p of b.props) {
+        const v = p.ref ? 'ref=' + q(p.ref) : 'value=' + q(p.value);
+        xml.push({ k: 'p:' + b.id + '.' + p.name,
+          t: h('    <property name=' + q(p.name) + ' ') + (p.ref && o.typo ? '<span class="chg">' + h(v) + '</span>' : h(v)) + '/&gt;' });
+      }
+      if (b.props.length) xml.push({ k: 'e:' + b.id, t: h('  </bean>') });
+    }
+    xml.push({ k: '', t: h('</beans>') });
+
+    const S = { defs: [], objs: [], stack: [], hl: [], cur: '', kt: 1, ktBad: -1, note: '' };
+    const steps = [];
+    let phase = '준비', seq = 0;
+    const snap = (title, body, src, x = {}) => {
+      Object.assign(S, { hl: [], cur: '' }, x);
+      steps.push(JSON.parse(JSON.stringify(Object.assign({}, S, { phase, title, body, src, err: !!x.err }))));
+    };
+    const defOf = n => S.defs.find(d => d.name === n && d.registered);
+    const cached = () => S.objs.filter(x => x.where === 'cache').length;
+
+    // getBean: 캐시 확인 → 설계도 → 생성 → 주입 → 캐시. Spring 의 doGetBean·doCreateBean 순서를 따른다.
+    function getBean(name) {
+      S.stack.push('getBean(' + q(name) + ')');
+      const hit = S.objs.find(x => x.name === name && x.where === 'cache');
+      if (hit) {
+        snap('`getBean(' + q(name) + ')`: 캐시에 있다',
+          '`singletonObjects` 에 이미 있다. 새로 만들지 않는다. 같은 객체를 돌려준다.', 'hit', { cur: 'o' + hit.oid });
+        S.stack.pop(); return hit;
+      }
+      const d = defOf(name);
+      if (!d) {
+        snap('`getBean(' + q(name) + ')`: 설계도가 없다',
+          '캐시에도 없고 `beanDefinitionMap` 에도 없다. `NoSuchBeanDefinitionException` 을 던진다. 메시지는 No bean named \'' + name + '\' available 이다.',
+          'nodef', { err: true });
+        S.stack.pop(); throw { fail: true };
+      }
+      const single = d.scope === 'singleton';
+      snap('`getBean(' + q(name) + ')`: ' + (single ? '캐시에 없다' : '새로 만든다'),
+        single ? '`singletonObjects` 에 없다. `beanDefinitionMap` 에서 설계도를 꺼낸다. scope 는 singleton 이다.'
+               : 'prototype 은 캐시를 쓰지 않는다. 설계도를 꺼낸다. 부를 때마다 새로 만든다.',
+        'get', { cur: 'd' + name, hl: ['b:' + name] });
+
+      const ob = { oid: ++seq, name, short: d.short, where: 'making', fields: d.props.map(p => ({ name: p.name, text: '' })) };
+      S.objs.push(ob);
+      snap('기본 생성자로 객체를 만든다',
+        '설계도의 `class` 이름으로 클래스를 찾는다. 인자 없는 생성자를 부른다.' + (d.props.length ? ' 필드는 아직 비어 있다.' : ''),
+        'inst', { cur: 'o' + ob.oid, hl: ['b:' + name] });
+
+      const vals = [];
+      for (const p of d.props) {
+        const key = 'p:' + name + '.' + p.name;
+        if (p.ref) {
+          snap('`ref` 를 푼다',
+            '`' + p.name + '` 에 넣을 값은 `RuntimeBeanReference(' + q(p.ref) + ')` 다. 그 이름으로 `getBean` 을 다시 부른다. `' + name + '` 은 만드는 중인 채로 기다린다.',
+            'ref', { cur: 'o' + ob.oid, hl: [key] });
+          let dep;
+          try { dep = getBean(p.ref); }
+          catch (e) {
+            S.objs = S.objs.filter(x => x.oid !== ob.oid);
+            snap('`' + name + '` 생성이 실패한다',
+              '참조를 풀지 못했다. `BeanCreationException` 으로 감싸 다시 던진다. 메시지는 Cannot resolve reference to bean \'' + p.ref + '\' while setting bean property \'' + p.name + '\' 다. 만들던 `' + d.short + '` 는 버린다.',
+              'refFail', { err: true, hl: [key] });
+            S.stack.pop(); throw e;
+          }
+          vals.push(dep.short + '@' + dep.oid);
+        } else {
+          snap('문자열을 세터 타입으로 바꾼다',
+            '`' + p.name + '` 의 세터는 `Int` 를 받는다. 문자열 `' + q(p.value) + '` 을 숫자 `' + p.value + '` 으로 바꾼다.',
+            'conv', { cur: 'o' + ob.oid, hl: [key] });
+          vals.push(p.value);
+        }
+      }
+      if (d.props.length) {
+        const me = S.objs.find(x => x.oid === ob.oid);
+        me.fields.forEach((f, i) => { f.text = vals[i]; });
+        snap('세터를 부른다',
+          d.props.map((p, i) => '`set' + p.name[0].toUpperCase() + p.name.slice(1) + '(' + vals[i] + ')`').join(', ') + ' 을 차례로 부른다. Kotlin 의 `var` 프로퍼티가 이 세터를 만든다.',
+          'set', { cur: 'o' + ob.oid, hl: d.props.map(p => 'p:' + name + '.' + p.name) });
+      }
+      const me = S.objs.find(x => x.oid === ob.oid);
+      if (single) {
+        me.where = 'cache';
+        snap('캐시에 넣는다',
+          '초기화 콜백을 부른 뒤 `singletonObjects` 에 넣는다. 이 예시에는 `init-method` 가 없다. 이제 `' + name + '` 은 완성이다.',
+          'cache', { cur: 'o' + ob.oid, hl: ['b:' + name] });
+      } else {
+        me.where = 'loose';
+        snap('캐시에 넣지 않고 돌려준다',
+          'prototype 은 만든 객체를 기억하지 않는다. 받은 쪽만 이 객체를 안다.',
+          'proto', { cur: 'o' + ob.oid, hl: ['b:' + name] });
+      }
+      S.stack.pop(); return me;
+    }
+
+    // 준비
+    S.stack = ['main()', 'refresh()'];
+    snap('컨텍스트를 만든다',
+      '`ClassPathXmlApplicationContext("beans.xml")` 생성자가 `refresh()` 를 부른다. `refresh()` 는 등록과 생성을 차례로 한다. 지금은 설계도도 객체도 없다.', 'ctor');
+
+    // 1단계: XML → 설계도
+    phase = '1단계 · 등록';
+    S.stack = ['main()', 'refresh()', 'loadBeanDefinitions("beans.xml")'];
+    for (const b of beans) {
+      const d = { name: b.id, cls: b.cls, short: b.short, scope: b.scope, lazy: b.lazy, props: [], registered: false, rows: [] };
+      S.defs.push(d);
+      snap('`<bean id=' + q(b.id) + '>` 를 만난다',
+        '리더가 `id` 와 `class` 를 읽는다. 새 설계도에 적는다. 클래스는 이름만 적는다. 객체는 만들지 않는다.' +
+        (b.lazy || b.scope === 'prototype' ? ' `' + (b.lazy ? 'lazy-init' : 'scope') + '` 값도 여기서 설계도에 적힌다.' : ''),
+        'bean', { cur: 'd' + b.id, hl: ['b:' + b.id] });
+      for (const p of b.props) {
+        const dd = S.defs.find(x => x.name === b.id);
+        dd.props.push(p);
+        if (p.ref) {
+          dd.rows.push([p.name, 'RuntimeBeanReference(' + q(p.ref) + ')']);
+          snap('`ref` 는 이름으로만 적는다',
+            '`ref=' + q(p.ref) + '` 를 객체로 바꾸지 않는다. 이름을 담은 `RuntimeBeanReference` 로 둔다. 그 이름의 빈이 있는지도 확인하지 않는다.' +
+            (o.typo ? ' 오타 `' + p.ref + '` 도 그대로 통과한다.' : ''),
+            'prop', { cur: 'd' + b.id, hl: ['p:' + b.id + '.' + p.name] });
+        } else {
+          dd.rows.push([p.name, 'TypedStringValue(' + q(p.value) + ')']);
+          snap('`value` 는 문자열로 적는다',
+            '`value=' + q(p.value) + '` 은 아직 문자열이다. `TypedStringValue` 로 둔다. 숫자로 바꾸는 일은 2단계에서 한다.',
+            'prop', { cur: 'd' + b.id, hl: ['p:' + b.id + '.' + p.name] });
+        }
+      }
+      S.defs.find(x => x.name === b.id).registered = true;
+      snap('설계도를 이름으로 등록한다',
+        '`beanDefinitionMap` 에 `' + b.id + '` → 설계도를 넣는다. `beanDefinitionNames` 끝에 이름을 붙인다. 이 순서가 2단계의 생성 순서다.',
+        'reg', { cur: 'd' + b.id, hl: [(b.props.length ? 'e:' : 'b:') + b.id] });
+    }
+    snap('1단계 끝: 설계도 ' + beans.length + '개, 객체 0개',
+      'XML 을 다 읽었다. 여기까지 `PetStoreService` 와 `JpaAccountDao` 의 생성자는 한 번도 불리지 않았다.', 'load');
+
+    // 2단계: 설계도 → 객체
+    phase = '2단계 · 생성';
+    S.stack = ['main()', 'refresh()', 'preInstantiateSingletons()'];
+    let failed = false;
+    snap('싱글톤을 미리 만든다',
+      '`refresh()` 의 마지막 일이다. 등록한 순서대로 이름을 꺼낸다. 싱글톤이고 lazy 가 아닌 빈만 `getBean` 한다.', 'pre');
+    try {
+      for (const b of beans) {
+        if (b.scope !== 'singleton') {
+          snap('`' + b.id + '` 는 건너뛴다',
+            'scope 가 prototype 이다. 미리 만들지 않는다. 누가 `getBean` 할 때마다 새로 만든다.', 'skipP', { cur: 'd' + b.id, hl: ['b:' + b.id] });
+        } else if (b.lazy) {
+          snap('`' + b.id + '` 는 건너뛴다',
+            '`lazy-init="true"` 다. 처음 `getBean` 할 때까지 미룬다.', 'skipL', { cur: 'd' + b.id, hl: ['b:' + b.id] });
+        } else getBean(b.id);
+      }
+    } catch (e) { failed = true; }
+
+    if (failed) {
+      S.objs = []; S.stack = ['main()'];
+      snap('`refresh()` 가 실패한다',
+        '이미 만든 싱글톤을 모두 없앤다. 생성자가 예외를 던진다. `main` 의 다음 줄은 실행되지 않는다.', 'fail', { err: true, ktBad: 1 });
+      return { xml, steps };
+    }
+    S.stack = ['main()'];
+    snap('시작 끝: 캐시에 객체 ' + cached() + '개',
+      '생성자가 돌아왔다. ' + (cached() ? '싱글톤은 이미 만들어져 캐시에 있다.' : '미리 만든 객체가 없다. 모두 처음 `getBean` 할 때 만든다.'), 'done');
+
+    // 사용: main 의 나머지 줄
+    phase = '사용';
+    let a, b2;
+    try {
+      S.kt = 2; a = getBean('petStore');
+      S.kt = 3; b2 = getBean('accountDao');
+    } catch (e) {
+      S.stack = ['main()'];
+      snap('예외가 `main` 까지 올라온다',
+        '컨텍스트는 정상으로 떴다. 오류는 `getBean("petStore")` 줄에서 처음 드러난다. lazy 는 생성과 함께 오류도 미룬다.', 'refFail', { err: true, ktBad: 2 });
+      return { xml, steps };
+    }
+    const same = a.fields[0].text === b2.short + '@' + b2.oid;
+    S.kt = 4; S.note = same ? '   // true' : '   // false';
+    snap(same ? '같은 객체다' : '다른 객체다',
+      same ? '`petStore.accountDao` 와 `dao` 는 같은 객체다. 싱글톤은 캐시의 한 객체를 모두가 나눠 쓴다.'
+           : '`petStore.accountDao` 와 `dao` 는 다른 객체다. prototype 은 `getBean` 마다 새로 만든다.',
+      o.proto ? 'proto' : 'hit', { cur: 'o' + b2.oid });
+    return { xml, steps };
+  }
+
+  // 화면: 단계 하나(스냅샷)를 받아 그린다. 모델을 고치지 않는다.
+  const $ = id => document.getElementById(id);
+  const opt = { swap: false, proto: false, lazy: false, typo: false };
+  let M = build(opt), i = 0;
+
+  function render() {
+    const s = M.steps[i];
+    $('phase').textContent = s.phase;
+    $('title').innerHTML = md(s.title);
+    $('body').innerHTML = md(s.body);
+    $('src').textContent = SRC[s.src][0] + ' — ' + SRC[s.src][1] + ' @v7.0.10';
+    $('now').classList.toggle('err', s.err);
+    $('count').textContent = (i + 1) + ' / ' + M.steps.length;
+    $('scrub').max = M.steps.length - 1; $('scrub').value = i;
+    $('prev').disabled = i === 0; $('next').disabled = i === M.steps.length - 1;
+
+    $('xml').innerHTML = M.xml.map(l =>
+      '<span class="l' + (l.k && s.hl.includes(l.k) ? (s.err ? ' bad' : ' on') : '') + '">' + l.t + '</span>').join('');
+    $('kt').innerHTML = KT.map((t, n) => {
+      const c = n === s.ktBad ? ' bad' : n === s.kt && s.ktBad < 0 ? ' on' : s.ktBad >= 0 && n > s.ktBad && n < KT.length - 1 ? ' dim' : '';
+      return '<span class="l' + c + '">' + h(t) + (n === 4 ? h(s.note) : '') + '</span>';
+    }).join('');
+
+    const reg = s.defs.filter(d => d.registered).length;
+    $('ndef').textContent = reg + '개';
+    $('defs').innerHTML = s.defs.length ? '<div class="cards">' + s.defs.map(d =>
+      '<div class="card' + (s.cur === 'd' + d.name ? ' cur' : '') + (d.registered ? '' : ' ghost') + '">' +
+      '<div class="ch"><b>' + h(d.name) + '</b><span class="tag">' + d.scope + '</span>' +
+      (d.lazy ? '<span class="tag">lazy</span>' : '') + (d.registered ? '' : '<span class="tag">등록 전</span>') + '</div>' +
+      '<div class="r"><i>class</i> ' + h(d.cls) + '</div>' +
+      d.rows.map(r => '<div class="r"><i>' + h(r[0]) + ' ←</i> ' + h(r[1]) + '</div>').join('') + '</div>').join('') + '</div>'
+      : '<div class="none">아직 없다</div>';
+
+    const WH = { making: '만드는 중', cache: '캐시', loose: '캐시 밖' };
+    $('nobj').textContent = '캐시 ' + s.objs.filter(x => x.where === 'cache').length + '개';
+    $('objs').innerHTML = s.objs.length ? '<div class="cards">' + s.objs.map(x =>
+      '<div class="card' + (s.cur === 'o' + x.oid ? ' cur' : '') + (x.where === 'making' ? ' ghost' : '') + '">' +
+      '<div class="ch"><b>' + h(x.short) + '@' + x.oid + '</b><span class="tag">' + WH[x.where] +
+      (x.where === 'cache' ? ' · ' + h(q(x.name)) : '') + '</span></div>' +
+      x.fields.map(f => '<div class="r"><i>' + h(f.name) + ' =</i> ' + (f.text ? h(f.text) : '(비어 있음)') + '</div>').join('') + '</div>').join('') + '</div>'
+      : '<div class="none">아직 없다</div>';
+
+    $('stack').innerHTML = s.stack.map((f, n) => '<li style="--d:' + n + '">' + h(f) + '</li>').join('');
+  }
+  const go = n => { i = Math.max(0, Math.min(M.steps.length - 1, n)); render(); };
+
+  $('prev').onclick = () => go(i - 1);
+  $('next').onclick = () => go(i + 1);
+  $('reset').onclick = () => go(0);
+  $('scrub').oninput = e => go(+e.target.value);
+  document.querySelectorAll('[data-opt]').forEach(el => {
+    el.onchange = () => { opt[el.dataset.opt] = el.checked; M = build(opt); go(0); };
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input, button, summary') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowRight') go(i + 1);
+    if (e.key === 'ArrowLeft') go(i - 1);
+  });
+  window.__lab = { build, go, steps: () => M.steps };   // 점검용
+  render();
+})();
+</script>
+</body></html>

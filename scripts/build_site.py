@@ -11,6 +11,7 @@
 - 제목 아래 첫 문단은 머리 요약이 된다.
 - `## 섹션` 마다 번호가 붙는다. 섹션이 6개 이상이면 왼쪽에 목차가 생긴다.
 - 상대 경로 `.md` 링크는 `.html` 로 바뀐다. 대상이 wiki/ 안에 없으면 실패한다.
+- wiki/ 의 `.html` 은 조작 페이지다. `scripts/site/base.css` 링크만 인라인 CSS 로 바꿔 옮긴다.
 """
 from __future__ import annotations
 
@@ -43,6 +44,7 @@ CSS = (Path(__file__).parent / "site" / "base.css").read_text(encoding="utf-8") 
 
 LINK = re.compile(r'href="([^":#]+)\.md(#[^"]*)?"')
 TAG = re.compile(r"<[^>]+>")
+BASE_CSS_LINK = re.compile(r'<link rel="stylesheet" href="[^"]*scripts/site/base\.css">')
 
 
 def render(md: str) -> str:
@@ -168,6 +170,14 @@ def main() -> int:
             continue
         dst = SITE / src.relative_to(WIKI)
         dst.parent.mkdir(parents=True, exist_ok=True)
+        if src.suffix == ".html":
+            # 조작 페이지: 공통 CSS 링크를 인라인 CSS 로 바꾼다. 나머지는 그대로 둔다.
+            text = src.read_text(encoding="utf-8")
+            if not BASE_CSS_LINK.search(text):
+                errors.append(f"{src.relative_to(ROOT)}: scripts/site/base.css 링크가 없다")
+            dst.write_text(BASE_CSS_LINK.sub(lambda _: f"<style>{CSS}</style>", text), encoding="utf-8")
+            count += 1
+            continue
         if src.suffix != ".md":
             shutil.copy2(src, dst)
             continue
