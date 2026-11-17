@@ -6,3 +6,7 @@
 
 - 기준 태그를 정했다: spring-framework `v7.0.10`, spring-boot `v4.1.2`.
 - `summer-sandal` 이 `summer-framework` 를 `api` 로 의존하게 했다.
+
+## [2026-11-17] query | XML 빈 로딩 사용법과 호출 흐름
+
+`ClassPathXmlApplicationContext` 사용 예시와 `spring-beans.xsd` 기능을 정리했다. XML → BeanDefinition 등록 → getBean 생성 흐름을 `wiki/spring/xml-bean-loading.md` 에 남겼다.
